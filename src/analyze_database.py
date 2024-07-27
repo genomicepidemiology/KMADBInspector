@@ -12,15 +12,30 @@ def analyze_database(fastq, database, output, rt):
     else:
         print(f"Output directory {output} already exists.")
 
+    species_reference_count = 0
     if rt.lower() == 'illumina':
         fastq.sort()
         for i in range(0, len(fastq), 2):
             if i + 1 < len(fastq):  # Ensure there is a pair
                 file_pair = f"{fastq[i]} {fastq[i + 1]}"
-                type_stats(file_pair, database, output, rt)
+                count = type_stats(file_pair, database, output, rt)
+                species_reference_count += count
+        species_reference_count = species_reference_count/(len(fastq)/2)
     elif rt.lower() == 'nanopore':
         for file in fastq:
-            type_stats(file, database, output, rt)
+            count = type_stats(file, database, output, rt)
+            species_reference_count += count
+        species_reference_count = species_reference_count / len(fastq)
+
+    print (f'Average number of species references: {species_reference_count}')
+
+    res_files = [os.path.join(output, f) for f in os.listdir(output) if f.endswith('.res')]
+    highest_identities = list()
+    for result_file in res_files:
+        highest_identity = get_highest_template_identity(result_file)
+        highest_identities.append(highest_identity)
+
+    print(f'Average highest ID: {sum(highest_identities) / len(highest_identities)}')
 
 def type_stats(file, database, output, rt):
     #determine reference species
@@ -36,7 +51,7 @@ def type_stats(file, database, output, rt):
     primary_specie = ' '.join(highest_scoring_template.split()[1:3])
 
     #TBD check these alignments with the stuff from melbourne. Settings could be off.
-    #Add nanopore alignment settings
+    #Add nanopore alignment settings. Do we need to perhaps fragment the reads?
     if rt.lower() == 'illumina':
         cmd = f'kma -i {file} -o {output}/{name}_alignment -t_db {database} -1t1 -mem_mode -Mt1 {template_number} -t 4'
         os.system(cmd)
@@ -44,6 +59,24 @@ def type_stats(file, database, output, rt):
         cmd = f'kma -i {file} -o {output}/{name}_alignment -t_db {database} -ont -1t1 -mem_mode -Mt1 {template_number} -t 4'
         os.system(cmd)
 
+    count = count_species_references(database + '.name', primary_specie)
+
+    return count
+
+
+
+
+
+def get_highest_template_identity(result_file_path):
+    highest_identity = 0.0  # Initialize the highest identity as zero
+    with open(result_file_path, 'r') as file:
+        next(file)  # Skip the header line
+        for line in file:
+            columns = line.strip().split('\t')
+            template_identity = float(columns[4])  # Template_Identity is the 5th column (index 4)
+            if template_identity > highest_identity:
+                highest_identity = template_identity
+    return highest_identity
 
 
 def highest_scoring_hit(file_path):
@@ -82,3 +115,11 @@ def highest_scoring_hit(file_path):
                 continue
 
     return highest_scoring_template, template_number
+
+def count_species_references(file_path, species_name):
+    count = 0
+    with open(file_path, 'r') as file:
+        for line in file:
+            if species_name in line:
+                count += 1
+    return count
