@@ -3,6 +3,8 @@ import sys
 
 
 def analyze_database(fastq, database, output, rt):
+    if rt.lower() != 'illumina' and rt.lower() != 'nanopore':
+        sys.exit('Either illumina or nanopore must be given as the read type (rt).')
     # Check if the output directory exists, if not, create it
     if not os.path.exists(output):
         os.makedirs(output)
@@ -10,12 +12,17 @@ def analyze_database(fastq, database, output, rt):
     else:
         print(f"Output directory {output} already exists.")
 
-    for file in fastq:
-        type_stats(file, database, output, rt)
+    if rt.lower() == 'illumina':
+        fastq.sort()
+        for i in range(0, len(fastq), 2):
+            if i + 1 < len(fastq):  # Ensure there is a pair
+                file_pair = f"{fastq[i]} {fastq[i + 1]}"
+                type_stats(file_pair, database, output, rt)
+    elif rt.lower() == 'nanopore':
+        for file in fastq:
+            type_stats(file, database, output, rt)
 
 def type_stats(file, database, output, rt):
-    if rt.lower() != 'illumina' and rt.lower() != 'nanopore':
-        sys.exit('Either illumina or nanopore must be given as the read type (rt).')
     #determine reference species
     name = os.path.basename(file).split('.')[0]
     cmd = f'kma -i {file} -o {output}/{name}_mapping -t_db {database} -mem_mode -Sparse -mf 50000 -ss c -t 4'
@@ -30,7 +37,7 @@ def type_stats(file, database, output, rt):
         cmd = f'kma -i {file} -o {output}/{name}_alignment -t_db {database} -1t1 -mem_mode -Mt1 {template_number} -t 4'
         os.system(cmd)
     elif rt.lower() == 'nanopore':
-        cmd = f'kma -i {file} -o -o {output}/{name}_alignment -t_db {database} -ont -1t1 -mem_mode -Mt1 {template_number} -t 4'
+        cmd = f'kma -i {file} -o {output}/{name}_alignment -t_db {database} -ont -1t1 -mem_mode -Mt1 {template_number} -t 4'
         os.system(cmd)
 
 
