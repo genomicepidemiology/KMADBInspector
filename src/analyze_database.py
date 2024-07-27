@@ -10,8 +10,9 @@ def analyze_database(fastq, database, output, rt):
     else:
         print(f"Output directory {output} already exists.")
 
-    for item in fastq:
+    for file in fastq:
         type_stats(file, database, output, rt)
+
 def type_stats(file, database, output, rt):
     #determine reference species
     name = file.split('.')[0]
