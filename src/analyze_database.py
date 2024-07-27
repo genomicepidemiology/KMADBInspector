@@ -19,7 +19,7 @@ def type_stats(file, database, output, rt):
     os.system(cmd)
 
     highest_scoring_template = highest_scoring_hit(os.path.join(output, f"{name}_mapping.spa"))
-    print (name)
+    print (highest_scoring_template)
 
 def highest_scoring_hit(file_path):
     """
