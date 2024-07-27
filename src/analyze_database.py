@@ -24,7 +24,11 @@ def analyze_database(fastq, database, output, rt):
 
 def type_stats(file, database, output, rt):
     #determine reference species
-    name = os.path.basename(file).split('.')[0]
+    if ' ' in file: #assumes a PE string
+        single_file = file.split(' ')[0]
+        name = os.path.basename(single_file).split('.')[0]
+    else:
+        name = os.path.basename(file).split('.')[0]
     cmd = f'kma -i {file} -o {output}/{name}_mapping -t_db {database} -mem_mode -Sparse -mf 50000 -ss c -t 4'
     os.system(cmd)
 
