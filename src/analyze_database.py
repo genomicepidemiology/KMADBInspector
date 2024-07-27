@@ -14,15 +14,23 @@ def analyze_database(fastq, database, output, rt):
         type_stats(file, database, output, rt)
 
 def type_stats(file, database, output, rt):
+    if rt.lower() != 'illumina' and rt.lower() != 'nanopore':
+        sys.exit()
     #determine reference species
     name = os.path.basename(file).split('.')[0]
-    print (file, name)
     cmd = f'kma -i {file} -o {output}/{name}_mapping -t_db {database} -mem_mode -Sparse -mf 50000 -ss c -t 4'
-    print (cmd)
     os.system(cmd)
 
-    highest_scoring_template = highest_scoring_hit(os.path.join(output, f"{name}_mapping.spa"))
-    print (highest_scoring_template)
+    highest_scoring_template, template_number = highest_scoring_hit(os.path.join(output, f"{name}_mapping.spa"))
+    primary_specie = ' '.join(highest_scoring_template.split()[1:3])
+
+    #TBD check these alignments with the stuff from melbourne. Settings could be off.
+    if rt.lower() == 'illumina':
+        cmd = f'kma -i {file} -o {output}/{name}_alignment -t_db {database} -1t1 -mem_mode -Mt1 {template_number} -t 4'
+        os.system(cmd)
+    elif rt.lower() == 'nanopore':
+        cmd = f'kma -i {file} -o '
+
 
 def highest_scoring_hit(file_path):
     """
@@ -42,6 +50,7 @@ def highest_scoring_hit(file_path):
 
     highest_score = 0
     highest_scoring_template = ""
+    template_number = ""
 
     with open(file_path, 'r') as file:
         next(file)  # Skip the header line
@@ -53,8 +62,9 @@ def highest_scoring_hit(file_path):
                 if score > highest_score:
                     highest_score = score
                     highest_scoring_template = columns[0]  # Template is expected in the 1st column
+                    template_number = columns[1]
             except ValueError:
                 # Skip line if score is not an integer or line is malformed
                 continue
 
-    return highest_scoring_template
+    return highest_scoring_template, template_number
