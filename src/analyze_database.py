@@ -15,7 +15,7 @@ def analyze_database(fastq, database, output, rt):
 
 def type_stats(file, database, output, rt):
     #determine reference species
-    name = file.split('.')[0]
+    name = os.path.basename(file).split('.')[0]
     print (file, name)
     cmd = f'kma -i {file} -o {output}/{name}_mapping -t_db {database} -mem_mode -Sparse -mf 50000 -ss c -t 4'
     print (cmd)
