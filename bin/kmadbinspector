@@ -1,0 +1,40 @@
+#!/usr/bin/env python3
+
+import argparse
+import sys
+import os
+import logging
+
+sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
+
+from src import analyze_database
+
+from src.version import __version__
+
+def main(args):
+    """Main function"""
+    analyze_database.analyze_database(args.fastq, args.database, args.output, args.rt)
+
+if __name__ == '__main__':
+    # initialize the options parser
+    parser = argparse.ArgumentParser('kmadbinspector', add_help=False)
+
+    parser.add_argument('--fastq', action="store", type=str, dest='fastq', nargs="+",
+                        default=[], help='List of fastq isolates to be analyzed.')
+    parser.add_argument('--database', action="store", type=str, dest='database',
+                        default=None, help='KMA indexed database.')
+    parser.add_argument('--output', action="store", type=str, dest="output",
+                        help="Output directory")
+    parser.add_argument('--rt', action="store", type=str, default='None', dest="rt",
+                        help="Much be either illumina or nanopore.")
+    parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
+    parser.add_argument('-h', '--help', action='help', help='Show this help message and exit')
+
+    args = parser.parse_args()
+
+    try:
+        main(args)
+    except Exception as e:
+        logging.error(e, exc_info=True)
+        r_type = None
+        raise
