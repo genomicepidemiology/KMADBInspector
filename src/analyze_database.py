@@ -15,7 +15,7 @@ def analyze_database(fastq, database, output, rt):
 
 def type_stats(file, database, output, rt):
     if rt.lower() != 'illumina' and rt.lower() != 'nanopore':
-        sys.exit()
+        sys.exit('Either illumina or nanopore must be given as the read type (rt).')
     #determine reference species
     name = os.path.basename(file).split('.')[0]
     cmd = f'kma -i {file} -o {output}/{name}_mapping -t_db {database} -mem_mode -Sparse -mf 50000 -ss c -t 4'
@@ -25,11 +25,14 @@ def type_stats(file, database, output, rt):
     primary_specie = ' '.join(highest_scoring_template.split()[1:3])
 
     #TBD check these alignments with the stuff from melbourne. Settings could be off.
+    #Add nanopore alignment settings
     if rt.lower() == 'illumina':
         cmd = f'kma -i {file} -o {output}/{name}_alignment -t_db {database} -1t1 -mem_mode -Mt1 {template_number} -t 4'
         os.system(cmd)
     elif rt.lower() == 'nanopore':
-        cmd = f'kma -i {file} -o '
+        cmd = f'kma -i {file} -o -o {output}/{name}_alignment -t_db {database} -ont -1t1 -mem_mode -Mt1 {template_number} -t 4'
+        os.system(cmd)
+
 
 
 def highest_scoring_hit(file_path):
