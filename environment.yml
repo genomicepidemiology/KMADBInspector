@@ -1,0 +1,5 @@
+name: kmadb
+channels:
+  - genomicepidemiology
+dependencies:
+  - kma
