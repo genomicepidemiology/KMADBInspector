@@ -30,12 +30,27 @@ def analyze_database(fastq, database, output, rt):
     print (f'Average number of species references: {species_reference_count}')
 
     res_files = [os.path.join(output, f) for f in os.listdir(output) if f.endswith('.res')]
-    highest_identities = list()
-    for result_file in res_files:
-        highest_identity = get_highest_template_identity(result_file)
-        highest_identities.append(highest_identity)
 
-    print(f'Average highest ID: {sum(highest_identities) / len(highest_identities)}')
+    # Initialize lists to store the highest identities and coverages
+    highest_identities = []
+    highest_coverages = []
+
+    # Process each result file
+    for result_file in res_files:
+        highest_identity, highest_coverage = get_highest_template_identity_and_coverage(result_file)
+        highest_identities.append(highest_identity)
+        highest_coverages.append(highest_coverage)
+
+    # Calculate and print the average highest template identity
+    average_highest_identity = sum(highest_identities) / len(highest_identities) if highest_identities else 0.0
+    print(f'Average highest Template Identity: {average_highest_identity}')
+
+    # Calculate and print the average highest query coverage
+    average_highest_coverage = sum(highest_coverages) / len(highest_coverages) if highest_coverages else 0.0
+    print(f'Average highest Query Coverage: {average_highest_coverage}')
+
+#TBD compute KMER cehck
+
 
 def type_stats(file, database, output, rt):
     #determine reference species
@@ -64,19 +79,25 @@ def type_stats(file, database, output, rt):
     return count
 
 
-
-
-
-def get_highest_template_identity(result_file_path):
-    highest_identity = 0.0  # Initialize the highest identity as zero
+def get_highest_template_identity_and_coverage(result_file_path):
+    highest_identity = 0.0  # Initialize the highest template identity as zero
+    highest_coverage = 0.0  # Initialize the highest query coverage as zero
     with open(result_file_path, 'r') as file:
         next(file)  # Skip the header line
         for line in file:
             columns = line.strip().split('\t')
             template_identity = float(columns[4])  # Template_Identity is the 5th column (index 4)
+            query_coverage = float(columns[5])  # Query_Coverage is the 6th column (index 5)
+
+            # Update highest identity if the current value is greater
             if template_identity > highest_identity:
                 highest_identity = template_identity
-    return highest_identity
+
+            # Update highest coverage if the current value is greater
+            if query_coverage > highest_coverage:
+                highest_coverage = query_coverage
+
+    return highest_identity, highest_coverage
 
 
 def highest_scoring_hit(file_path):
