@@ -152,7 +152,7 @@ def count_unique_kmers(fastq_files, rt, output_dir):
         txt_output_file = os.path.join(output_dir, 'mer_counts.txt')
 
         # Jellyfish is a popular tool for k-mer counting
-        cmd = f'jellyfish count -m 21 -s 100M -t 4 -C {input_files} -o {jf_output_file}'
+        cmd = f'jellyfish count -m 16 -s 100M -t 4 -C {input_files} -o {jf_output_file}'
         print(cmd)
         os.system(cmd)
 
