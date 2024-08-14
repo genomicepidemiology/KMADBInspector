@@ -1,7 +1,7 @@
 import os
 import sys
+import shutil
 import subprocess
-
 
 def analyze_database(fastq, database, output, rt):
     if rt.lower() not in ['illumina', 'nanopore']:
@@ -60,7 +60,7 @@ def type_stats(file, database, output, rt):
     else:
         name = os.path.basename(file).split('.')[0]
 
-    cmd = f'kma -i {file} -o {os.path.join(output, name)}_mapping -t_db {database} -mem_mode -Sparse -mf 50000 -ss c -t 4'
+    cmd = f'kma -i {os.path.join(output, file)} -o {os.path.join(output, name)}_mapping -t_db {database} -mem_mode -Sparse -mf 50000 -ss c -t 4'
     os.system(cmd)
 
     highest_scoring_template, template_number = highest_scoring_hit(os.path.join(output, f"{name}_mapping.spa"))
@@ -128,33 +128,52 @@ def count_species_references(file_path, species_name):
 
 
 def count_unique_kmers(fastq_files, rt, output_dir):
-    if rt.lower() == 'illumina':
-        input_files = ' '.join(fastq_files)  # Join both files if paired-end
-    else:
-        input_files = fastq_files[0]  # Use the single file for Nanopore
+    # Create temporary directory for the decompressed files
+    temp_dir = os.path.join(output_dir, 'temp_fastq')
+    os.makedirs(temp_dir, exist_ok=True)
 
-    # Set the output files to the output directory
-    jf_output_file = os.path.join(output_dir, 'mer_counts.jf')
-    txt_output_file = os.path.join(output_dir, 'mer_counts.txt')
+    decompressed_files = []
 
-    # Jellyfish is a popular tool for k-mer counting
-    cmd = f'jellyfish count -m 21 -s 100M -t 4 -C {input_files} -o {jf_output_file}'
-    print (cmd)
-    os.system(cmd)
+    try:
+        # Copy and decompress the files
+        for fastq in fastq_files:
+            decompressed_file = os.path.join(temp_dir, os.path.basename(fastq).replace('.gz', ''))
+            with open(decompressed_file, 'wb') as out_f:
+                subprocess.run(['gunzip', '-c', fastq], stdout=out_f)
+            decompressed_files.append(decompressed_file)
 
-    # Dump the counts into a text file
-    cmd = f'jellyfish dump {jf_output_file} > {txt_output_file}'
-    os.system(cmd)
+        if rt.lower() == 'illumina':
+            input_files = ' '.join(decompressed_files)  # Join both files if paired-end
+        else:
+            input_files = decompressed_files[0]  # Use the single file for Nanopore
 
-    # Count the number of unique k-mers
-    unique_kmers = 0
-    if os.path.exists(txt_output_file):
-        with open(txt_output_file, 'r') as file:
-            unique_kmers = sum(1 for line in file if line.strip())  # Each line represents a unique k-mer
-    else:
-        print(f"Error: {txt_output_file} not found.", file=sys.stderr)
+        # Set the output files to the output directory
+        jf_output_file = os.path.join(output_dir, 'mer_counts.jf')
+        txt_output_file = os.path.join(output_dir, 'mer_counts.txt')
 
-    return unique_kmers
+        # Jellyfish is a popular tool for k-mer counting
+        cmd = f'jellyfish count -m 21 -s 100M -t 4 -C {input_files} -o {jf_output_file}'
+        print(cmd)
+        os.system(cmd)
+
+        # Dump the counts into a text file
+        cmd = f'jellyfish dump {jf_output_file} > {txt_output_file}'
+        os.system(cmd)
+
+        # Count the number of unique k-mers
+        unique_kmers = 0
+        if os.path.exists(txt_output_file):
+            with open(txt_output_file, 'r') as file:
+                unique_kmers = sum(1 for line in file if line.strip())  # Each line represents a unique k-mer
+        else:
+            print(f"Error: {txt_output_file} not found.", file=sys.stderr)
+
+        return unique_kmers
+    finally:
+        # Clean up temporary files
+        for decompressed_file in decompressed_files:
+            os.remove(decompressed_file)
+        os.rmdir(temp_dir)
 
 # Example usage:
 # fastq_files = ['sample1_R1.fastq', 'sample1_R2.fastq']  # For Illumina
