@@ -24,7 +24,7 @@ def count_kmers(fasta_file):
 
 if __name__ == '__main__':
     # Initialize the top-level parser
-    parser = argparse.ArgumentParser(prog='kmadbinspector', description='Kmadbinspector tool', add_help=False)
+    parser = argparse.ArgumentParser(prog='kmadbinspector', description='Kmadbinspector tool')
 
     # Create subparsers for different subcommands
     subparsers = parser.add_subparsers(dest='subcommand', required=True, help='Sub-command to run')
@@ -41,13 +41,11 @@ if __name__ == '__main__':
     analyze_parser.add_argument('--rt', action="store", type=str, default='None', dest="rt",
                                 help="Must be either illumina or nanopore.")
     analyze_parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
-    analyze_parser.add_argument('-h', '--help', action='help', help='Show this help message and exit')
 
     # Parser for the count_kmers command
     count_kmers_parser = subparsers.add_parser('count_kmers', help='Count kmers in a fasta file')
     count_kmers_parser.add_argument('fasta', action="store", type=str, help='Input fasta file to count kmers from')
     count_kmers_parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
-    count_kmers_parser.add_argument('-h', '--help', action='help', help='Show this help message and exit')
 
     args = parser.parse_args()
 
