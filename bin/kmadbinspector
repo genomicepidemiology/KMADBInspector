@@ -5,36 +5,57 @@ import sys
 import os
 import logging
 
-sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)),'..')] + sys.path
+sys.path = [os.path.join(os.path.dirname(os.path.realpath(__file__)), '..')] + sys.path
 
 from src import analyze_database
-
 from src.version import __version__
 
 def main(args):
     """Main function"""
     analyze_database.analyze_database(args.fastq, args.database, args.output, args.rt)
 
-if __name__ == '__main__':
-    # initialize the options parser
-    parser = argparse.ArgumentParser('kmadbinspector', add_help=False)
+def count_kmers(fasta_file):
+    """Function to count kmers in a fasta file"""
+    #Brug kma db
+    # Placeholder for the function you'll implement
+    # You'll replace this with your actual logic later
+    print(f"Counting kmers in {fasta_file}")
+    # Add the actual kmer counting logic here
 
-    parser.add_argument('--fastq', action="store", type=str, dest='fastq', nargs="+",
-                        default=[], help='List of fastq isolates to be analyzed.')
-    parser.add_argument('--database', action="store", type=str, dest='database',
-                        default=None, help='KMA indexed database.')
-    parser.add_argument('--output', action="store", type=str, dest="output",
-                        help="Output directory")
-    parser.add_argument('--rt', action="store", type=str, default='None', dest="rt",
-                        help="Much be either illumina or nanopore.")
-    parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
-    parser.add_argument('-h', '--help', action='help', help='Show this help message and exit')
+if __name__ == '__main__':
+    # Initialize the top-level parser
+    parser = argparse.ArgumentParser(prog='kmadbinspector', description='Kmadbinspector tool', add_help=False)
+
+    # Create subparsers for different subcommands
+    subparsers = parser.add_subparsers(dest='subcommand', required=True, help='Sub-command to run')
+
+    # Parser for the analyze command
+    analyze_parser = subparsers.add_parser('analyze', help='Analyze fastq files against a database')
+
+    analyze_parser.add_argument('--fastq', action="store", type=str, dest='fastq', nargs="+",
+                                default=[], help='List of fastq isolates to be analyzed.')
+    analyze_parser.add_argument('--database', action="store", type=str, dest='database',
+                                default=None, help='KMA indexed database.')
+    analyze_parser.add_argument('--output', action="store", type=str, dest="output",
+                                help="Output directory")
+    analyze_parser.add_argument('--rt', action="store", type=str, default='None', dest="rt",
+                                help="Must be either illumina or nanopore.")
+    analyze_parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
+    analyze_parser.add_argument('-h', '--help', action='help', help='Show this help message and exit')
+
+    # Parser for the count_kmers command
+    count_kmers_parser = subparsers.add_parser('count_kmers', help='Count kmers in a fasta file')
+    count_kmers_parser.add_argument('fasta', action="store", type=str, help='Input fasta file to count kmers from')
+    count_kmers_parser.add_argument('--version', action='version', version='%(prog)s ' + __version__)
+    count_kmers_parser.add_argument('-h', '--help', action='help', help='Show this help message and exit')
 
     args = parser.parse_args()
 
     try:
-        main(args)
+        if args.subcommand == 'analyze':
+            main(args)
+        elif args.subcommand == 'count_kmers':
+            count_kmers(args.fasta)
     except Exception as e:
         logging.error(e, exc_info=True)
-        r_type = None
         raise

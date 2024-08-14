@@ -1,7 +1,6 @@
 import os
 import sys
 
-
 def analyze_database(fastq, database, output, rt):
     if rt.lower() != 'illumina' and rt.lower() != 'nanopore':
         sys.exit('Either illumina or nanopore must be given as the read type (rt).')
@@ -27,7 +26,7 @@ def analyze_database(fastq, database, output, rt):
             species_reference_count += count
         species_reference_count = species_reference_count / len(fastq)
 
-    print (f'Average number of species references: {species_reference_count}')
+    print(f'Average number of species references: {species_reference_count}')
 
     res_files = [os.path.join(output, f) for f in os.listdir(output) if f.endswith('.res')]
 
@@ -49,12 +48,14 @@ def analyze_database(fastq, database, output, rt):
     average_highest_coverage = sum(highest_coverages) / len(highest_coverages) if highest_coverages else 0.0
     print(f'Average highest Query Coverage: {average_highest_coverage}')
 
-#TBD compute KMER cehck
+    # K-mer counting
+    kmer_count = count_unique_kmers(fastq, rt)
+    print(f'Total unique k-mers: {kmer_count}')
 
 
 def type_stats(file, database, output, rt):
-    #determine reference species
-    if ' ' in file: #assumes a PE string
+    # Determine reference species
+    if ' ' in file:  # Assumes a PE string
         single_file = file.split(' ')[0]
         name = os.path.basename(single_file).split('.')[0]
     else:
@@ -65,8 +66,8 @@ def type_stats(file, database, output, rt):
     highest_scoring_template, template_number = highest_scoring_hit(os.path.join(output, f"{name}_mapping.spa"))
     primary_specie = ' '.join(highest_scoring_template.split()[1:3])
 
-    #TBD check these alignments with the stuff from melbourne. Settings could be off.
-    #Add nanopore alignment settings. Do we need to perhaps fragment the reads?
+    # TBD: Check these alignments with the settings from Melbourne. Settings could be off.
+    # Add nanopore alignment settings. Do we need to perhaps fragment the reads?
     if rt.lower() == 'illumina':
         cmd = f'kma -i {file} -o {output}/{name}_alignment -t_db {database} -1t1 -mem_mode -Mt1 {template_number} -t 4'
         os.system(cmd)
@@ -101,21 +102,6 @@ def get_highest_template_identity_and_coverage(result_file_path):
 
 
 def highest_scoring_hit(file_path):
-    """
-    Identifies and returns the highest scoring template from a tab-separated file.
-
-    This function reads through a specified file, assuming it to be tab-separated,
-    and identifies the row with the highest score in a designated score column.
-    It returns the template corresponding to this highest score.
-
-    Args:
-        file_path (str): The path to the file to be read. Assumes a specific format where
-                         the score is in the third column and the template in the first.
-
-    Returns:
-        str: The identifier of the highest scoring template.
-    """
-
     highest_score = 0
     highest_scoring_template = ""
     template_number = ""
@@ -137,6 +123,7 @@ def highest_scoring_hit(file_path):
 
     return highest_scoring_template, template_number
 
+
 def count_species_references(file_path, species_name):
     count = 0
     with open(file_path, 'r') as file:
@@ -144,3 +131,37 @@ def count_species_references(file_path, species_name):
             if species_name in line:
                 count += 1
     return count
+
+
+def count_unique_kmers(fastq_files, rt):
+    if rt.lower() == 'illumina':
+        input_files = ' '.join(fastq_files)  # Join both files if paired-end
+    else:
+        input_files = fastq_files[0]  # Use the single file for Nanopore
+
+    # Jellyfish is a popular tool for k-mer counting
+    cmd = f'jellyfish count -m 21 -s 100M -t 4 -C {input_files} -o mer_counts.jf'
+    os.system(cmd)
+
+    # Dump the counts into a text file
+    cmd = 'jellyfish dump mer_counts.jf > mer_counts.txt'
+    os.system(cmd)
+
+    # Count the number of unique k-mers
+    with open('mer_counts.txt', 'r') as file:
+        unique_kmers = sum(1 for line in file if line.strip())  # Each line represents a unique k-mer
+
+    # Clean up intermediate files
+    os.remove('mer_counts.jf')
+    os.remove('mer_counts.txt')
+
+    return unique_kmers
+
+
+# Example usage:
+# fastq_files = ['sample1_R1.fastq', 'sample1_R2.fastq']  # For Illumina
+# database = 'database_name'
+# output_directory = './output'
+# read_type = 'illumina'  # or 'nanopore'
+
+# analyze_database(fastq_files, database, output_directory, read_type)
